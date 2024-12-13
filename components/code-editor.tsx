@@ -7,7 +7,6 @@ import "prismjs/components/prism-python";
 import "prismjs/components/prism-markup";
 import "prismjs/themes/prism-tomorrow.css";
 import { Tabs } from "./tabs";
-import { Footer } from "./footer";
 
 export default function CodeEditor() {
   const [code, setCode] = useState(``);
@@ -27,19 +26,18 @@ export default function CodeEditor() {
 
     const startBlinking = () => {
       blinkInterval = setInterval(() => {
-      setAutocomplete((prev) => (prev === "..." ? "" : "..."));
+        setAutocomplete((prev) => (prev === "..." ? "" : "..."));
       }, 500);
     };
 
     const stopBlinking = () => {
       if (blinkInterval) {
-      clearInterval(blinkInterval);
-      blinkInterval = null;
+        clearInterval(blinkInterval);
+        blinkInterval = null;
       }
     };
 
     startBlinking();
-
 
     try {
       const response = await fetch("http://localhost:11434/api/generate", {
@@ -48,10 +46,12 @@ export default function CodeEditor() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "qwen2.5-coder:32b",
+          model: "qwen2.5-coder:7b",
           // prompt: `${code}`,
           prompt: `
-          <|fim_prefix|>Update the following code in the editor for Python. Wrap all code in a code box<|fim_suffix|><|fim_middle|>${code}
+          <|fim_prefix|>Update the following code in the editor for Python.
+          Show an example of how to run it.
+          Only include code.<|fim_suffix|><|fim_middle|>${code}
           `,
           system: `
           Update the code and do not provide other information. This will happen directly in a code editor.
@@ -79,7 +79,7 @@ export default function CodeEditor() {
             console.log(data);
             accumulatedResponse += data["response"];
             setAutocomplete(
-              accumulatedResponse + "\n" + "(Press Tab to merge)"
+              accumulatedResponse + "\n" + "(Press Tab to merge)",
             );
           } catch (e) {
             console.error("Error parsing JSON:", e);
@@ -126,7 +126,7 @@ export default function CodeEditor() {
         getAutocomplete();
       }
     },
-    [autocomplete, getAutocomplete]
+    [autocomplete, getAutocomplete],
   );
 
   return (
@@ -169,7 +169,6 @@ export default function CodeEditor() {
             </div>
           )}
         </div>
-        <Footer />
       </div>
     </div>
   );

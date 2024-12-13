@@ -1,5 +1,5 @@
-import React from 'react'
-import { File, X } from 'lucide-react'
+import React from "react";
+import { File, X } from "lucide-react";
 
 export function Tabs() {
   return (
@@ -7,9 +7,7 @@ export function Tabs() {
       <div className="flex items-center space-x-2 py-2 px-4 bg-gray-900 text-purple-300 border-t border-purple-500">
         <File className="w-4 h-4" />
         <span className="text-sm">Python Code</span>
-        <X className="w-4 h-4 ml-2 cursor-pointer hover:text-purple-100" />
       </div>
     </div>
-  )
+  );
 }
-
