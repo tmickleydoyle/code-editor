@@ -1,5 +1,12 @@
 ![6051164](https://github.com/user-attachments/assets/1cfa2b1c-c744-4cbc-a7e7-b9d56c0c4ee6)
 
+### TODO
+
+- Support autocomplete outside of localhost
+- Allows user to select LLM
+- Code selection for autocomplete
+- RAG for code in directory
+
 # Code Editor with Autocomplete
 
 This project implements a simple code editor with syntax highlighting and autocomplete functionality.
