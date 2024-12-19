@@ -64,7 +64,7 @@ This editor fetches autocomplete suggestions from an API endpoint:
 - Payload:
   ```json
   {
-    "model": "qwen2.5-coder:7b",
+    "model": "qwen2.5-coder",
     "prompt": "<your_code_with_prompts>",
     "system": "<your_system_instructions>"
   }
