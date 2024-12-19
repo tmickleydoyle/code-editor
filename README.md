@@ -39,6 +39,8 @@ This project implements a simple code editor with syntax highlighting and autoco
 3. Press `Alt` to generate autocomplete suggestions.
 4. Press `Tab` to merge the suggested code into your editor.
 
+_Note: For autocomplete, run an Ollama server locally._
+
 ## Key Components
 
 - **`CodeEditor` Component:** Handles the core functionality of the editor.
