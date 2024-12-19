@@ -9,6 +9,8 @@
 
 # Code Editor with Autocomplete
 
+![Screenshot 2024-12-19 at 13 31 19](https://github.com/user-attachments/assets/35034a58-96a3-4cb7-930a-b2c19dd93a54)
+
 This project implements a simple code editor with syntax highlighting and autocomplete functionality.
 
 ## Features
