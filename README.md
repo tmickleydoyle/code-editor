@@ -1,3 +1,4 @@
+
 ![6051164](https://github.com/user-attachments/assets/1cfa2b1c-c744-4cbc-a7e7-b9d56c0c4ee6)
 
 ### TODO
@@ -9,7 +10,7 @@
 
 # Code Editor with Autocomplete
 
-![Screenshot 2024-12-19 at 13 31 19](https://github.com/user-attachments/assets/35034a58-96a3-4cb7-930a-b2c19dd93a54)
+https://github.com/user-attachments/assets/9927bb30-0674-4cb6-bd2c-f5bafdc5469c
 
 This project implements a simple code editor with syntax highlighting and autocomplete functionality.
 
@@ -41,6 +42,13 @@ This project implements a simple code editor with syntax highlighting and autoco
    npm run dev
    ```
 
+4. Install Ollama
+
+5. Pull model from Ollama:
+   ```bash
+   ollama pull hf.co/tmickleydoyle/Qwen2.5-Coder-7B-Instruct.gguf:latest
+   ```
+
 ## Usage
 
 1. Open the application in your browser.
@@ -64,8 +72,9 @@ This editor fetches autocomplete suggestions from an API endpoint:
 - Payload:
   ```json
   {
-    "model": "qwen2.5-coder",
-    "prompt": "<your_code_with_prompts>",
+    "model": "hf.co/tmickleydoyle/Qwen2.5-Coder-7B-Instruct.gguf:latest",
+    "prompt": "<your_code_before_the_autocomplete>",
+    "suffix": "<your_code_after_the_autocomplete>",
     "system": "<your_system_instructions>"
   }
   ```
