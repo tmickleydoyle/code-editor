@@ -82,8 +82,14 @@ function CodeEditorContent({
   // Update code when active tab changes
   useEffect(() => {
     if (activeContent) {
+      setPrefix("");
+      setSuffix("");
+      setAutocomplete("");
       setCode(activeContent.content);
     } else {
+      setPrefix("");
+      setSuffix("");
+      setAutocomplete("");
       setCode("");
     }
   }, [activeContent, setCode]);
@@ -194,9 +200,9 @@ function CodeEditorContent({
         setCode(newCode);
         if (activeContent) {
           const updatedTabs = tabs.map((tab) =>
-        tab.id === activeTab
-          ? { ...tab, isUnsaved: true, content: newCode }
-          : tab
+            tab.id === activeTab
+              ? { ...tab, isUnsaved: true, content: newCode }
+              : tab
           );
           setTabs(updatedTabs);
         }
