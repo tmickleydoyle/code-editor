@@ -1,17 +1,32 @@
-import React, { useState } from "react";
-import { File, Folder, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { File, Folder, Loader2, Github } from "lucide-react";
 import { useGitHubFiles } from "../hooks/use-gitHub-files";
 import { useEditor } from "../context/editor-context";
 
 export function Sidebar() {
+  const [orgName, setOrgName] = useState("tmickleydoyle");
+  const [repoName, setRepoName] = useState("python-app-demo");
+  const [activeOrg, setActiveOrg] = useState("tmickleydoyle");
+  const [activeRepo, setActiveRepo] = useState("python-app-demo");
+
   const { files, loading, error, getFileContent } = useGitHubFiles(
-    "tmickleydoyle",
-    "language-model"
+    activeOrg,
+    activeRepo
   );
   const { openTab } = useEditor();
   const [expandedDirs, setExpandedDirs] = useState<{ [key: string]: boolean }>(
     {}
   );
+
+  const handlePull = () => {
+    setActiveOrg(orgName);
+    setActiveRepo(repoName);
+    setExpandedDirs({});
+  };
+
+  useEffect(() => {
+    setExpandedDirs({});
+  }, [orgName, repoName]);
 
   const handleFileClick = async (file: {
     type: string;
@@ -49,7 +64,20 @@ export function Sidebar() {
 
     return files.map((file) => {
       const filePath = parentPath ? `${parentPath}/${file.name}` : file.name;
-      const fileNameClass = file.name.endsWith(".py") ? "text-orange-300" : "";
+      const textBasedExtensions = [
+        ".md",
+        ".txt",
+        ".csv",
+        ".doc",
+        ".docx",
+        ".rtf",
+        ".pdf",
+      ];
+      const fileNameClass = textBasedExtensions.some((ext) =>
+        file.name.toLowerCase().endsWith(ext)
+      )
+        ? ""
+        : "text-orange-300";
 
       if (file.type === "dir") {
         const isExpanded = expandedDirs[filePath];
@@ -87,15 +115,54 @@ export function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <h2 className="text-sm font-medium text-gray-200">Repository Files</h2>
       </div>
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <input
+          type="text"
+          value={orgName}
+          onChange={(e) => setOrgName(e.target.value)}
+          placeholder="Organization Name"
+          className="bg-gray-700 text-gray-200 p-2 rounded w-full"
+        />
+      </div>
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <input
+          type="text"
+          value={repoName}
+          onChange={(e) => setRepoName(e.target.value)}
+          placeholder="Repository Name"
+          className="bg-gray-700 text-gray-200 p-2 rounded w-full"
+        />
+      </div>
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <button
+          onClick={handlePull}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full"
+        >
+          Pull
+        </button>
+      </div>
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <a
+          href={`https://github.com/${activeOrg}/${activeRepo}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-medium text-gray-200 hover:text-gray-400 flex items-center"
+        >
+          <Github className="w-4 h-4 mr-2" />
+          {activeOrg}/{activeRepo}
+        </a>
+      </div>
       <div className="flex-1 overflow-auto p-3">
         {loading ? (
-          <Loader2 className="animate-spin" />
+          <div className="flex justify-center items-center h-full">
+            <Loader2 className="animate-spin w-6 h-6 text-blue-500" />
+          </div>
         ) : error ? (
           <div className="text-red-500">{error}</div>
-        ) : (
+        ) : files ? (
           renderFiles(files)
-        )}
-      </div>
+        ) : null}
+      </div>{" "}
     </div>
   );
 }

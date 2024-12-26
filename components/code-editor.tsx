@@ -3,10 +3,6 @@
 import React, { useRef, useCallback, useState, useEffect } from "react";
 import Editor from "react-simple-code-editor";
 import { Sidebar } from "./sidebar";
-
-interface EditorRefType {
-  textareaRef: HTMLTextAreaElement;
-}
 import Prism from "prismjs";
 import "prismjs/components/prism-python";
 import "prismjs/components/prism-markup";
@@ -14,14 +10,74 @@ import "prismjs/themes/prism-tomorrow.css";
 import { Tabs } from "./tabs";
 import { useEditor, EditorContextType } from "../context/editor-context";
 import { EditorProvider } from "../context/editor-context";
+import { RightSidebar } from "./right-sidebar";
 
-function CodeEditorContent() {
+interface EditorRefType {
+  textareaRef: HTMLTextAreaElement;
+}
+
+function CodeEditorContent({
+  setAllContentWithTabNames,
+}: {
+  setAllContentWithTabNames: React.Dispatch<
+    React.SetStateAction<Record<string, string>>
+  >;
+}) {
   const { tabs, activeTab, setTabs }: EditorContextType = useEditor();
   const activeContent = tabs.find((tab) => tab.id === activeTab);
   const [code, setCode] = useState("");
   const [autocomplete, setAutocomplete] = useState("");
   const abortControllerRef = useRef<AbortController | null>(null);
   const editorRef = useRef<{ session: { history: History } } | null>(null);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const [selectionStart, setSelectionStart] = useState(0);
+  const [selectionEnd, setSelectionEnd] = useState(0);
+  const [prefix, setPrefix] = useState("");
+  const [suffix, setSuffix] = useState("");
+  const [highlighted, setHighlighted] = useState("");
+
+  const handleInputChange = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const target = e.target as HTMLTextAreaElement;
+    updateCursorAndSelection(target);
+  };
+
+  const handleCursorMove = (
+    e:
+      | React.MouseEvent<HTMLTextAreaElement>
+      | React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    const target = e.target as HTMLTextAreaElement;
+    updateCursorAndSelection(target);
+  };
+
+  const updateCursorAndSelection = (target: HTMLTextAreaElement) => {
+    setCursorPosition(target.selectionStart);
+    setSelectionStart(target.selectionStart);
+    setSelectionEnd(target.selectionEnd);
+  };
+
+  // Gather all content with tab names as they are opened
+  useEffect(() => {
+    // Update content when tab changes
+    if (activeContent) {
+      setAllContentWithTabNames((prev) => ({
+        ...prev,
+        [activeContent.path]: activeContent.content,
+      }));
+    }
+
+    // Remove content for closed tabs
+    setAllContentWithTabNames((prev) => {
+      const currentTabNames = tabs.map((tab) => tab.path);
+      const newContent = { ...prev };
+      Object.keys(newContent).forEach((name) => {
+        if (!currentTabNames.includes(name)) {
+          delete newContent[name];
+        }
+      });
+      return newContent;
+    });
+  }, [activeContent, tabs, setAllContentWithTabNames, setTabs]);
 
   // Update code when active tab changes
   useEffect(() => {
@@ -30,7 +86,7 @@ function CodeEditorContent() {
     } else {
       setCode("");
     }
-  }, [activeContent]);
+  }, [activeContent, setCode]);
 
   // Track unsaved changes
   const handleCodeChange = (newCode: string) => {
@@ -46,66 +102,63 @@ function CodeEditorContent() {
     }
   };
 
-  const getSelectedText = () => {
-    const textarea = editorRef.current as unknown as { textareaRef: HTMLTextAreaElement };
-    if (textarea?.textareaRef) {
-      const { selectionStart, selectionEnd } = textarea.textareaRef;
-      return code.slice(selectionStart, selectionEnd);
-    }
-    return "";
-  };
-
   const getAutocomplete = useCallback(async () => {
-    const selectedText = getSelectedText();
-    const textToProcess = selectedText || code;;
+    const textToProcess = await code;
+
+    await setPrefix(textToProcess.slice(0, cursorPosition));
+    const prefix = await textToProcess.slice(0, cursorPosition);
+    await setSuffix(textToProcess.slice(cursorPosition));
+    const suffix = await textToProcess.slice(cursorPosition);
+    console.log("Code:", code);
+    console.log("cursorPosition", cursorPosition);
+    console.log("prefix", prefix);
+    console.log("suffix", suffix);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
     abortControllerRef.current = new AbortController();
-    setAutocomplete("...");
-    let blinkInterval: NodeJS.Timeout | null = null;
-
-    const startBlinking = () => {
-      blinkInterval = setInterval(() => {
-        setAutocomplete((prev) => (prev === "..." ? "" : "..."));
-      }, 500);
-    };
-
-    const stopBlinking = () => {
-      if (blinkInterval) {
-        clearInterval(blinkInterval);
-        blinkInterval = null;
-      }
-    };
-
-    startBlinking();
 
     try {
+      let body;
+
+      // if (suffix.trim() === "") {
+      body = {
+        model: "qwen2.5-coder:32b",
+        prompt: prefix,
+        suffix: suffix + " ",
+        system:
+          "Write python code. you are an AI autocompleter. complete the code based on the prompt.",
+        options: {
+          temperature: 0.1,
+        },
+      };
+      // }
+      // if (suffix.trim() !== "") {
+      //   body = {
+      //     model: "qwen2.5-coder:32b",
+      //     prompt: `${prefix}`,
+      //     suffix: `${suffix}`,
+      //     system:
+      //       "Write python code. you are an AI autocompleter. complete the code based on the prompt.",
+      //     options: {
+      //       temperature: 0,
+      //     },
+      //   };
+      // }
       const response = await fetch("http://localhost:11434/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          model: "qwen2.5-coder:32b",
-          prompt: `
-          <|fim_prefix|>Update the following code in the editor for Python.
-          Show an example of how to run it.
-          Only return code.<|fim_suffix|><|fim_middle|>${textToProcess}
-          `,
-          system: `
-          Update the code and do not provide other information. This will happen directly in a code editor.
-          `,
-        }),
+        body: JSON.stringify(body),
         signal: abortControllerRef.current.signal,
       });
 
       const reader = response.body?.getReader();
       if (!reader) return;
 
-      stopBlinking();
       let accumulatedResponse = "";
 
       while (true) {
@@ -114,21 +167,17 @@ function CodeEditorContent() {
 
         const chunk = new TextDecoder().decode(value);
         const lines = chunk.split("\n").filter((line) => line.trim());
-        let countCodeBlocks = 0;
 
         for (const line of lines) {
           try {
             const data = JSON.parse(line);
-            accumulatedResponse += data["response"];
-            if (data["response"] === "```") {
-              countCodeBlocks += 1;
-            }
-            if (countCodeBlocks >= 2) {
-              break;
-            }
-            setAutocomplete(
-              accumulatedResponse + "\n" + "(Press Tab to merge)"
-            );
+            const generatedCode = data["response"];
+
+            accumulatedResponse += generatedCode;
+
+            // Update UI with the new code
+            await setAutocomplete(accumulatedResponse);
+            await setCode(prefix + accumulatedResponse + suffix);
           } catch (e) {
             console.error("Error parsing JSON:", e);
           }
@@ -153,40 +202,46 @@ function CodeEditorContent() {
     (e: React.KeyboardEvent<HTMLDivElement | HTMLTextAreaElement>) => {
       if (e.key === "Tab" && autocomplete) {
         e.preventDefault();
-        const lines = autocomplete.split("\n");
-        if (lines[0].trim() === "```python" || lines[0].trim() === "```") {
-          lines.shift();
-        }
-        if (lines[lines.length - 2].trim() === "```") {
-          lines.pop();
-        }
-        if (lines[lines.length - 1].trim() === "```") {
-          lines.pop();
-        }
-        const finalCode = lines.join("\n");
 
-        const selectedText = getSelectedText();
-        if (selectedText) {
-          const textarea = (editorRef.current as unknown as EditorRefType)?.textareaRef;
-          if (textarea) {
-            const newCode =
-              code.slice(0, textarea.selectionStart) +
-              finalCode +
-              code.slice(textarea.selectionEnd);
-            setCode(newCode);
-          }
-        } else {
-          setCode(finalCode);
+        let newCode: string;
+        newCode = prefix + autocomplete + suffix;
+        setCode(newCode);
+        if (activeContent) {
+          const updatedTabs = tabs.map((tab) =>
+        tab.id === activeTab
+          ? { ...tab, isUnsaved: true, content: newCode }
+          : tab
+          );
+          setTabs(updatedTabs);
         }
+
         setAutocomplete("");
-      } else if (e.key === "Escape") {
-        setAutocomplete("");
+        setPrefix("");
+        setSuffix("");
       } else if (e.key === "Alt") {
         e.preventDefault();
         getAutocomplete();
+      } else if (e.metaKey || e.ctrlKey) {
+        if (e.key === "z" || e.key === "Z") {
+          setAutocomplete("");
+          setPrefix("");
+          setSuffix("");
+        } else if (e.key === "y" || e.key === "Y") {
+          setAutocomplete("");
+          setPrefix("");
+          setSuffix("");
+        }
       }
     },
-    [autocomplete, getAutocomplete]
+    [
+      autocomplete,
+      getAutocomplete,
+      activeContent,
+      activeTab,
+      tabs,
+      setTabs,
+      code,
+    ]
   );
 
   if (!activeTab) {
@@ -204,6 +259,10 @@ function CodeEditorContent() {
         onValueChange={handleCodeChange}
         highlight={highlightWithLineNumbers}
         onKeyDown={handleKeyDown}
+        onKeyUp={handleCursorMove}
+        onClick={handleCursorMove}
+        onSelect={handleCursorMove}
+        onChange={handleInputChange}
         padding={0}
         style={{
           fontFamily: '"Fira code", "Fira Mono", monospace',
@@ -228,7 +287,9 @@ function CodeEditorContent() {
             color: "rgba(156, 163, 175, 0.5)",
           }}
         >
-          {code + "\n" + autocomplete}
+          <span>{prefix}</span>
+          <span className="bg-gray-900">{autocomplete}</span>
+          <span>{suffix}</span>
         </div>
       )}
     </div>
@@ -236,13 +297,49 @@ function CodeEditorContent() {
 }
 
 export default function CodeEditor() {
+  const [allContentWithTabNames, setAllContentWithTabNames] = useState<
+    Record<string, string>
+  >({});
+
   return (
     <EditorProvider>
       <div className="flex h-screen bg-gray-900 text-gray-300">
-        <Sidebar />
+        <div className="flex">
+          <Sidebar />
+          <div
+            className="w-1 cursor-col-resize hover:bg-gray-600 active:bg-gray-500"
+            onMouseDown={(e) => {
+              const startX = e.pageX;
+              const sidebarElement = e.currentTarget
+                .previousElementSibling as HTMLElement;
+              const initialWidth = sidebarElement?.clientWidth ?? 0;
+
+              const onMouseMove = (e: MouseEvent) => {
+                if (sidebarElement) {
+                  const newWidth = initialWidth + (e.pageX - startX);
+                  sidebarElement.style.width = `${Math.max(
+                    200,
+                    Math.min(600, newWidth)
+                  )}px`;
+                }
+              };
+
+              const onMouseUp = () => {
+                document.removeEventListener("mousemove", onMouseMove);
+                document.removeEventListener("mouseup", onMouseUp);
+              };
+
+              document.addEventListener("mousemove", onMouseMove);
+              document.addEventListener("mouseup", onMouseUp);
+            }}
+          />
+        </div>
+        <RightSidebar allContentWithTabNames={allContentWithTabNames} />
         <div className="flex-1 flex flex-col">
           <Tabs />
-          <CodeEditorContent />
+          <CodeEditorContent
+            setAllContentWithTabNames={setAllContentWithTabNames}
+          />
         </div>
       </div>
     </EditorProvider>

@@ -10,18 +10,18 @@ export function Tabs() {
 
   if (tabs.length === 0) {
     return (
-      <div className="flex bg-gray-800 px-4 h-[37px] border-b border-gray-700">
+      <div className="flex bg-gray-800 px-4 h-[53px] border-b border-gray-700">
         <div className="flex items-center">
-            <span className="text-sm text-gray-400">
+          <span className="text-sm text-gray-400">
             Press ⇧⌘T to create a new tab
-            </span>
+          </span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex bg-gray-800 px-4 overflow-x-auto">
+    <div className="flex bg-gray-800 px-4 overflow-x-auto h-[53px] border-gray-700">
       {tabs.map((tab) => (
         <div
           key={tab.id}

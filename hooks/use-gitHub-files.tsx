@@ -18,7 +18,13 @@ export function useGitHubFiles(owner: string, repo: string) {
     async function fetchFiles(path = "") {
       try {
         const response = await fetch(
-          `https://api.github.com/repos/${owner}/${repo}/contents${path}`
+          `https://api.github.com/repos/${owner}/${repo}/contents${path}`,
+          {
+            headers: {
+              Authorization: `token ${process.env.NEXT_PUBLIC_GITHUB_TOKEN}`,
+              "X-GitHub-Api-Version": "2022-11-28",
+            },
+          }
         );
         const data = await response.json();
 
