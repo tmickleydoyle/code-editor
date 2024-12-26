@@ -123,9 +123,8 @@ function CodeEditorContent({
     try {
       let body;
 
-      // if (suffix.trim() === "") {
       body = {
-        model: "qwen2.5-coder:32b",
+        model: "hf.co/tmickleydoyle/Qwen2.5-Coder-7B-Instruct.gguf:latest",
         prompt: prefix,
         suffix: suffix + " ",
         system:
@@ -134,19 +133,6 @@ function CodeEditorContent({
           temperature: 0.1,
         },
       };
-      // }
-      // if (suffix.trim() !== "") {
-      //   body = {
-      //     model: "qwen2.5-coder:32b",
-      //     prompt: `${prefix}`,
-      //     suffix: `${suffix}`,
-      //     system:
-      //       "Write python code. you are an AI autocompleter. complete the code based on the prompt.",
-      //     options: {
-      //       temperature: 0,
-      //     },
-      //   };
-      // }
       const response = await fetch("http://localhost:11434/api/generate", {
         method: "POST",
         headers: {
