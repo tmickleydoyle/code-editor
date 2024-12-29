@@ -2,39 +2,42 @@
 
 import React, { useRef, useCallback, useState, useEffect } from "react";
 import Editor from "react-simple-code-editor";
-import { Sidebar } from "./sidebar";
 import Prism from "prismjs";
 import "prismjs/components/prism-python";
 import "prismjs/components/prism-markup";
 import "prismjs/themes/prism-tomorrow.css";
+import { Sidebar } from "./sidebar";
 import { Tabs } from "./tabs";
 import { useEditor, EditorContextType } from "../context/editor-context";
 import { EditorProvider } from "../context/editor-context";
 import { RightSidebar } from "./right-sidebar";
+import { EngineerAssistant } from "../helpers/prompts";
 
-interface EditorRefType {
-  textareaRef: HTMLTextAreaElement;
-}
-
-function CodeEditorContent({
-  setAllContentWithTabNames,
-}: {
+interface CodeEditorContentProps {
   setAllContentWithTabNames: React.Dispatch<
     React.SetStateAction<Record<string, string>>
   >;
-}) {
+}
+
+const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
+  setAllContentWithTabNames,
+}) => {
   const { tabs, activeTab, setTabs }: EditorContextType = useEditor();
   const activeContent = tabs.find((tab) => tab.id === activeTab);
   const [code, setCode] = useState("");
   const [autocomplete, setAutocomplete] = useState("");
   const abortControllerRef = useRef<AbortController | null>(null);
-  const editorRef = useRef<{ session: { history: History } } | null>(null);
   const [cursorPosition, setCursorPosition] = useState(0);
-  const [selectionStart, setSelectionStart] = useState(0);
-  const [selectionEnd, setSelectionEnd] = useState(0);
+  // const [selectionStart, setSelectionStart] = useState(0);
+  // const [selectionEnd, setSelectionEnd] = useState(0);
   const [prefix, setPrefix] = useState("");
   const [suffix, setSuffix] = useState("");
-  const [highlighted, setHighlighted] = useState("");
+
+  const updateCursorAndSelection = (target: HTMLTextAreaElement) => {
+    setCursorPosition(target.selectionStart);
+    // setSelectionStart(target.selectionStart);
+    // setSelectionEnd(target.selectionEnd);
+  };
 
   const handleInputChange = (e: React.FormEvent<HTMLTextAreaElement>) => {
     const target = e.target as HTMLTextAreaElement;
@@ -50,15 +53,7 @@ function CodeEditorContent({
     updateCursorAndSelection(target);
   };
 
-  const updateCursorAndSelection = (target: HTMLTextAreaElement) => {
-    setCursorPosition(target.selectionStart);
-    setSelectionStart(target.selectionStart);
-    setSelectionEnd(target.selectionEnd);
-  };
-
-  // Gather all content with tab names as they are opened
   useEffect(() => {
-    // Update content when tab changes
     if (activeContent) {
       setAllContentWithTabNames((prev) => ({
         ...prev,
@@ -66,7 +61,6 @@ function CodeEditorContent({
       }));
     }
 
-    // Remove content for closed tabs
     setAllContentWithTabNames((prev) => {
       const currentTabNames = tabs.map((tab) => tab.path);
       const newContent = { ...prev };
@@ -77,9 +71,8 @@ function CodeEditorContent({
       });
       return newContent;
     });
-  }, [activeContent, tabs, setAllContentWithTabNames, setTabs]);
+  }, [activeContent, tabs, setAllContentWithTabNames]);
 
-  // Update code when active tab changes
   useEffect(() => {
     if (activeContent) {
       setPrefix("");
@@ -92,9 +85,8 @@ function CodeEditorContent({
       setAutocomplete("");
       setCode("");
     }
-  }, [activeContent, setCode]);
+  }, [activeContent]);
 
-  // Track unsaved changes
   const handleCodeChange = (newCode: string) => {
     setCode(newCode);
     if (activeContent && newCode !== activeContent.content) {
@@ -103,22 +95,17 @@ function CodeEditorContent({
           ? { ...tab, isUnsaved: true, content: newCode }
           : tab
       );
-      // Update the tabs state in context
       setTabs(updatedTabs);
     }
   };
 
   const getAutocomplete = useCallback(async () => {
-    const textToProcess = await code;
+    const textToProcess = code;
 
-    await setPrefix(textToProcess.slice(0, cursorPosition));
-    const prefix = await textToProcess.slice(0, cursorPosition);
-    await setSuffix(textToProcess.slice(cursorPosition));
-    const suffix = await textToProcess.slice(cursorPosition);
-    console.log("Code:", code);
-    console.log("cursorPosition", cursorPosition);
-    console.log("prefix", prefix);
-    console.log("suffix", suffix);
+    setPrefix(textToProcess.slice(0, cursorPosition));
+    const prefix = textToProcess.slice(0, cursorPosition);
+    setSuffix(textToProcess.slice(cursorPosition));
+    const suffix = textToProcess.slice(cursorPosition);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -127,24 +114,20 @@ function CodeEditorContent({
     abortControllerRef.current = new AbortController();
 
     try {
-      let body;
-
-      body = {
-        model: "hf.co/tmickleydoyle/Qwen2.5-Coder-7B-Instruct.gguf:latest",
-        prompt: prefix,
-        suffix: suffix + " ",
-        system:
-          "Write python code. you are an AI autocompleter. complete the code based on the prompt.",
-        options: {
-          temperature: 0.1,
-        },
-      };
       const response = await fetch("http://localhost:11434/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          model: "hf.co/tmickleydoyle/Qwen2.5-Coder-7B-Instruct.gguf:latest",
+          prompt: prefix,
+          suffix: suffix + " ",
+          system: EngineerAssistant,
+          options: {
+            temperature: 0.2,
+          },
+        }),
         signal: abortControllerRef.current.signal,
       });
 
@@ -167,9 +150,8 @@ function CodeEditorContent({
 
             accumulatedResponse += generatedCode;
 
-            // Update UI with the new code
-            await setAutocomplete(accumulatedResponse);
-            await setCode(prefix + accumulatedResponse + suffix);
+            setAutocomplete(accumulatedResponse);
+            setCode(prefix + accumulatedResponse + suffix);
           } catch (e) {
             console.error("Error parsing JSON:", e);
           }
@@ -182,7 +164,7 @@ function CodeEditorContent({
         console.error("Error fetching autocomplete:", error);
       }
     }
-  }, [code]);
+  }, [code, cursorPosition]);
 
   const highlightWithLineNumbers = (input: string) =>
     Prism.highlight(input, Prism.languages.python, "python")
@@ -194,9 +176,7 @@ function CodeEditorContent({
     (e: React.KeyboardEvent<HTMLDivElement | HTMLTextAreaElement>) => {
       if (e.key === "Tab" && autocomplete) {
         e.preventDefault();
-
-        let newCode: string;
-        newCode = prefix + autocomplete + suffix;
+        const newCode = prefix + autocomplete + suffix;
         setCode(newCode);
         if (activeContent) {
           const updatedTabs = tabs.map((tab) =>
@@ -206,7 +186,6 @@ function CodeEditorContent({
           );
           setTabs(updatedTabs);
         }
-
         setAutocomplete("");
         setPrefix("");
         setSuffix("");
@@ -214,15 +193,16 @@ function CodeEditorContent({
         e.preventDefault();
         getAutocomplete();
       } else if (e.metaKey || e.ctrlKey) {
-        if (e.key === "z" || e.key === "Z") {
-          setAutocomplete("");
-          setPrefix("");
-          setSuffix("");
-        } else if (e.key === "y" || e.key === "Y") {
+        if (e.key === "z" || e.key === "Z" || e.key === "y" || e.key === "Y") {
           setAutocomplete("");
           setPrefix("");
           setSuffix("");
         }
+      } else if (e.key === "Escape") {
+        setAutocomplete("");
+        setPrefix("");
+        setSuffix("");
+        setCode(prefix + suffix);
       }
     },
     [
@@ -232,7 +212,8 @@ function CodeEditorContent({
       activeTab,
       tabs,
       setTabs,
-      code,
+      prefix,
+      suffix,
     ]
   );
 
@@ -286,9 +267,9 @@ function CodeEditorContent({
       )}
     </div>
   );
-}
+};
 
-export default function CodeEditor() {
+const CodeEditor: React.FC = () => {
   const [allContentWithTabNames, setAllContentWithTabNames] = useState<
     Record<string, string>
   >({});
@@ -336,4 +317,6 @@ export default function CodeEditor() {
       </div>
     </EditorProvider>
   );
-}
+};
+
+export default CodeEditor;
