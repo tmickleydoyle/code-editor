@@ -49,6 +49,8 @@ This project implements a simple code editor with syntax highlighting and autoco
    ollama pull hf.co/tmickleydoyle/Qwen2.5-Coder-7B-Instruct.gguf:latest
    ```
 
+	Model was fine-tuned [here](https://github.com/tmickleydoyle/fine-tune-with-unsloth).
+
 ## Usage
 
 1. Open the application in your browser.
