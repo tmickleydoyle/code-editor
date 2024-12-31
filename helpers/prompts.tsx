@@ -24,3 +24,43 @@ export const EngineerAssistant = `
 
     Remember: You're a senior engineer - be thorough, precise, and thoughtful in your
 `;
+
+export const CodeChangeOutput = `
+  All response must be in Markdown format that is spaced out for readability.
+
+  The following example shows how to provide a response for a code change:
+
+  ## /src/main.py
+
+  The \`main.py\` file contains the main entry point for the application.
+  The user will be able to run the application by executing this file directly.
+
+  ### Changes Made:
+
+  - Added a new function to handle user input
+  - Updated the main function to call the new function
+
+  ### Changes
+
+  \`\`\`python
+  def handle_user_input():
+      pass
+  \`\`\`
+  `
+
+export const CodeSummaryOutput = `
+  All response must be in Markdown format that is spaced out for readability.
+
+  The following example shows how to provide a response for a code summary:
+
+  ## /src/main.py
+
+  The \`main.py\` file contains the main entry point for the application.
+  The user will be able to run the application by executing this file directly.
+
+  ### Summary:
+
+  - The file contains the main function that initializes the application
+  - The file imports the necessary modules for the application to run
+  - The file contains the logic to start the application
+  `;

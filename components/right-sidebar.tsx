@@ -4,9 +4,16 @@ import React, { useRef, useCallback, useState } from "react";
 import { ArrowLeft, ArrowRight, Send } from "lucide-react";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
+import { zodResponseFormat } from "openai/helpers/zod";
+import OpenAI from "openai";
 
-import { EngineerAssistant } from "../helpers/prompts";
+import {
+  EngineerAssistant,
+  CodeChangeOutput,
+  CodeSummaryOutput,
+} from "../helpers/prompts";
 import { useChatHistory } from "../helpers/chat-history-manager";
+import { GitHubMarkdown } from "../components/github-markdown";
 
 const CodeFileChange = z.object({
   summary_of_changes: z.string(),
@@ -20,12 +27,18 @@ const CodeFileChange = z.object({
 
 const CodeSummary = z.object({
   summary_of_changes: z.string(),
-  code_updates: z.array(
+  code_summaries: z.array(
     z.object({
       filepath: z.string(),
-      sunmary_of_code: z.string(),
+      summary: z.string(),
     })
   ),
+});
+
+const OpenAIClient = new OpenAI({
+  baseURL: process.env.NEXT_PUBLIC_LLM_FIM_URL,
+  apiKey: process.env.NEXT_PUBLIC_LLM_API_TOKEN,
+  dangerouslyAllowBrowser: true,
 });
 
 interface RightSidebarProps {
@@ -41,6 +54,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   const abortControllerRef = useRef<AbortController | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { chatHistory, addMessage, clearHistory } = useChatHistory();
+  const [isStream, setIsStream] = useState(false);
 
   const handleSearch = useCallback(async () => {
     setIsLoading(true);
@@ -69,75 +83,55 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       if (searchValue.startsWith("/update")) {
         promptContent =
           fileContent +
-          "\n\nIf there are filepaths and content above, consider them in the response. \n\n" +
+          "\n\n" +
+          CodeChangeOutput +
+          "\n\n" +
           searchValue.replace("/update", "");
       }
 
       if (searchValue.startsWith("/new")) {
         promptContent =
           "\n\nCreate a new application in a new directory. \n\n" +
+          CodeChangeOutput +
+          "\n\n" +
           searchValue.replace("/new", "");
       }
 
       if (searchValue.startsWith("/summary")) {
         promptContent =
           fileContent +
-          "\n\nSummarize the code. \n\n" +
+          "\n\n" +
+          CodeSummaryOutput +
+          "\n\n" +
           searchValue.replace("/summary", "");
         responseFormat = CodeSummary;
       }
 
       addMessage("user", searchValue);
 
-      const resp = await fetch("http://localhost:11434/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "hf.co/tmickleydoyle/Qwen2.5-Coder-7B-Instruct.gguf:latest",
-          messages: [
-            { role: "system", content: EngineerAssistant },
-            ...chatHistory,
-            { role: "user", content: promptContent },
-          ],
-          format: zodToJsonSchema(responseFormat),
-          stream: false,
-          options: {
-            temperature: 0.2,
-          },
-        }),
-        signal: abortControllerRef.current.signal,
+      const messageResponse = await OpenAIClient.chat.completions.create({
+        model: "deepseek-chat",
+        messages: [
+          { role: "system", content: EngineerAssistant },
+          ...chatHistory,
+          { role: "user", content: promptContent },
+        ],
+        stream: true,
+        temperature: 0,
       });
 
-      setIsLoading(false);
-      setResponse(null);
-
-      const reader = resp.body?.getReader();
-      if (!reader) {
-        setResponse("No response body available.");
-        return;
-      }
-
+      setIsStream(true);
       let fullResponse = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = new TextDecoder().decode(value);
-        fullResponse += chunk;
+      for await (const chunk of messageResponse) {
+        const content = chunk.choices[0].delta.content || "";
+        fullResponse += content;
+        setResponse((prev) =>
+          prev === "loading..." ? content : prev + content
+        );
       }
-
-      try {
-        const parsedResponse = JSON.parse(fullResponse);
-        setResponse(parsedResponse.message.content);
-        addMessage("assistant", parsedResponse.message.content);
-      } catch (e) {
-        console.error("Error parsing JSON response:", e);
-        setResponse(fullResponse);
-        addMessage("assistant", fullResponse);
-      }
+      addMessage("assistant", fullResponse);
+      setIsStream(false);
+      setIsLoading(false);
     } catch (err) {
       if (err.name === "AbortError") {
         console.log("Request aborted");
@@ -195,50 +189,28 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
       <div className="flex-1 overflow-y-auto p-4">
         {chatHistory.map((message, index) => (
-          <div key={index} className="mb-4 text-left">
+          <div
+            key={index}
+            className={`mb-4
+          ${message.role === "user" ? "text-right" : "text-left"}`}
+          >
             <div
               className={`inline-block p-2 rounded-lg ${
-                message.role === "user"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-700 text-gray-200"
+                message.role === "user" ? "bg-blue-500 text-white ml-auto" : ""
               }`}
             >
-              {message.role === "assistant" ? (
-                (() => {
-                  try {
-                    const parsed = JSON.parse(message.content);
-                    return (
-                      <>
-                        <div className="mb-6">
-                          <h3 className="text-gray-200 font-medium mb-2">
-                            Summary of Changes
-                          </h3>
-                          <pre className="bg-gray-700 p-3 rounded text-gray-200 text-sm whitespace-pre-wrap">
-                            {parsed.summary_of_changes}
-                          </pre>
-                        </div>
-                        {parsed.code_updates?.map((update, index) => (
-                          <div key={index} className="mb-6">
-                            <h3 className="text-gray-200 font-medium mb-2">
-                              {update.filepath}
-                            </h3>
-                            <pre className="bg-gray-700 p-3 rounded text-gray-200 text-sm whitespace-pre-wrap">
-                              {update.code}
-                            </pre>
-                          </div>
-                        ))}
-                      </>
-                    );
-                  } catch (error) {
-                    return (
-                      <pre className="whitespace-pre-wrap">
-                        {message.content}
-                      </pre>
-                    );
-                  }
-                })()
-              ) : (
+              {message.role === "user" ? (
                 <pre className="whitespace-pre-wrap">{message.content}</pre>
+              ) : (
+                <div className="w-[full]">
+                  <GitHubMarkdown
+                    content={
+                      isStream && index === chatHistory.length - 1
+                        ? response ?? ""
+                        : message.content
+                    }
+                  />
+                </div>
               )}
             </div>
           </div>

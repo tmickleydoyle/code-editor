@@ -17,7 +17,7 @@ This project implements a simple code editor with syntax highlighting and autoco
 ## Features
 
 - **Code Editing:** Supports editing Python code with line numbers.
-- **Syntax Highlighting:** Uses `Prism.js` with the "Tomorrow" theme.
+- **Syntax Highlighting:** Uses `Prism.js` with the "VS Dark" theme.
 - **Autocomplete:** Fetches code suggestions from an Ollama server based on the provided code.
 - **Keyboard Shortcuts:**
   - Press `Alt` to fetch autocomplete suggestions.
@@ -84,7 +84,7 @@ This editor fetches autocomplete suggestions from an API endpoint:
 ## Customization
 
 - **Highlighting:** Update `Prism.js` language definitions to add more languages.
-- **Styling:** Modify the `prism-tomorrow.css` or provide a custom CSS theme.
+- **Styling:** Modify the `prism-vs-dark.css` or provide a custom CSS theme.
 - **Server:** Replace the autocomplete API endpoint with your custom implementation.
 
 ## Dependencies
@@ -92,4 +92,4 @@ This editor fetches autocomplete suggestions from an API endpoint:
 - React
 - `react-simple-code-editor`
 - `prismjs`
-- `prismjs/themes/prism-tomorrow.css`
+- `prismjs/themes/prism-vs-dark.css`

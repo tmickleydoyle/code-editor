@@ -6,6 +6,8 @@ import Prism from "prismjs";
 import "prismjs/components/prism-python";
 import "prismjs/components/prism-markup";
 import "prismjs/themes/prism-tomorrow.css";
+import OpenAI from "openai";
+
 import { Sidebar } from "./sidebar";
 import { Tabs } from "./tabs";
 import { useEditor, EditorContextType } from "../context/editor-context";
@@ -18,6 +20,12 @@ interface CodeEditorContentProps {
     React.SetStateAction<Record<string, string>>
   >;
 }
+
+const OpenAIClient = new OpenAI({
+  baseURL: process.env.NEXT_PUBLIC_LLM_FIM_URL + "/beta",
+  apiKey: process.env.NEXT_PUBLIC_LLM_API_TOKEN,
+  dangerouslyAllowBrowser: true,
+});
 
 const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
   setAllContentWithTabNames,
@@ -114,48 +122,21 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
     abortControllerRef.current = new AbortController();
 
     try {
-      const response = await fetch("http://localhost:11434/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "hf.co/tmickleydoyle/Qwen2.5-Coder-7B-Instruct.gguf:latest",
-          prompt: prefix,
-          suffix: suffix + " ",
-          system: EngineerAssistant,
-          options: {
-            temperature: 0.2,
-          },
-        }),
-        signal: abortControllerRef.current.signal,
+      const response = await OpenAIClient.completions.create({
+        model: "deepseek-chat",
+        prompt: EngineerAssistant + "\n" + prefix,
+        suffix: suffix || " ",
+        max_tokens: 1024,
+        temperature: 0,
+        stream: true,
       });
-
-      const reader = response.body?.getReader();
-      if (!reader) return;
 
       let accumulatedResponse = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split("\n").filter((line) => line.trim());
-
-        for (const line of lines) {
-          try {
-            const data = JSON.parse(line);
-            const generatedCode = data["response"];
-
-            accumulatedResponse += generatedCode;
-
-            setAutocomplete(accumulatedResponse);
-            setCode(prefix + accumulatedResponse + suffix);
-          } catch (e) {
-            console.error("Error parsing JSON:", e);
-          }
-        }
+      for await (const chunk of response) {
+        accumulatedResponse += chunk.choices[0]?.text;
+        setAutocomplete(accumulatedResponse);
+        setCode(prefix + accumulatedResponse + suffix);
       }
     } catch (error) {
       if ((error as Error).name === "AbortError") {
