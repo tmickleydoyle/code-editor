@@ -9,11 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
     "@radix-ui/react-slot": "^1.1.1",
     "@tailwindcss/typography": "^0.5.15",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.460.0",
+    "monaco-editor": "^0.52.2",
     "next": "14.2.16",
     "openai": "^4.77.0",
     "prismjs": "^1.29.0",
