@@ -21,10 +21,11 @@ export function useGitHubFiles(owner: string, repo: string) {
           `https://api.github.com/repos/${owner}/${repo}/contents${path}`,
           {
             headers: {
-              Authorization: `token ${process.env.NEXT_PUBLIC_GITHUB_TOKEN}`,
+              Authorization:
+                `token ${process.env.NEXT_PUBLIC_GITHUB_TOKEN}` || "",
               "X-GitHub-Api-Version": "2022-11-28",
             },
-          }
+          },
         );
         const data = await response.json();
 
@@ -36,7 +37,7 @@ export function useGitHubFiles(owner: string, repo: string) {
                 return { ...file, children };
               }
               return file;
-            })
+            }),
           );
           return filesWithChildren;
         }

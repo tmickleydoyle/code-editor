@@ -102,7 +102,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           CodeSummaryOutput +
           "\n\n" +
           searchValue.replace("/summary", "");
-        responseFormat = CodeSummary;
       }
 
       addMessage("user", searchValue);

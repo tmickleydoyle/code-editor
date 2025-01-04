@@ -46,7 +46,7 @@ export const CodeChangeOutput = `
   def handle_user_input():
       pass
   \`\`\`
-  `
+  `;
 
 export const CodeSummaryOutput = `
   All response must be in Markdown format that is spaced out for readability.

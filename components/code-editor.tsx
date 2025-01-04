@@ -171,7 +171,7 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
 
     abortControllerRef.current = new AbortController();
 
-    let prompt =
+    const prompt =
       EngineerAssistant +
       "\nAssume the import of functions and other varibles exist in the repo and focus on the code in the file only.\n" +
       "\nUse the highlighted code and the comment to update the code.\n" +

@@ -12,7 +12,7 @@ interface SelectionRange {
 
 export function useEditorCursor(
   code: string,
-  textareaRef: React.RefObject<HTMLTextAreaElement>
+  textareaRef: React.RefObject<HTMLTextAreaElement>,
 ) {
   const [cursorPosition, setCursorPosition] = useState<CursorPosition>({
     row: 0,
