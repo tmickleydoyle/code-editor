@@ -17,8 +17,8 @@ This project implements a simple code editor with syntax highlighting and autoco
 ## Features
 
 - **Code Editing:** Supports editing Python code with line numbers.
-- **Syntax Highlighting:** Uses `Prism.js` with the "VS Dark" theme.
-- **Autocomplete:** Fetches code suggestions from an Ollama server based on the provided code.
+- **Syntax Highlighting:** Uses `Prism.js` with a light theme.
+- **Autocomplete:** Fetches code suggestions from an OpenAI API server based on the provided code.
 - **Keyboard Shortcuts:**
   - Press `Alt` to fetch autocomplete suggestions.
   - Press `Tab` to insert suggestions into the editor.
@@ -42,15 +42,6 @@ This project implements a simple code editor with syntax highlighting and autoco
    npm run dev
    ```
 
-4. Install Ollama
-
-5. Pull model from Ollama:
-   ```bash
-   ollama pull hf.co/tmickleydoyle/Qwen2.5-Coder-7B-Instruct.gguf:latest
-   ```
-
-	Model was fine-tuned [here](https://github.com/tmickleydoyle/fine-tune-with-unsloth).
-
 ## Usage
 
 1. Open the application in your browser.
@@ -63,33 +54,5 @@ _Note: For autocomplete, run an Ollama server locally._
 ## Key Components
 
 - **`CodeEditor` Component:** Handles the core functionality of the editor.
-- **`react-simple-code-editor`:** Lightweight code editor library.
+- **`monaco-editor`:** Lightweight code editor library.
 - **`Prism.js`:** Provides syntax highlighting.
-
-## API
-
-This editor fetches autocomplete suggestions from an API endpoint:
-- URL: `http://localhost:11434/api/generate`
-- Method: `POST`
-- Payload:
-  ```json
-  {
-    "model": "hf.co/tmickleydoyle/Qwen2.5-Coder-7B-Instruct.gguf:latest",
-    "prompt": "<your_code_before_the_autocomplete>",
-    "suffix": "<your_code_after_the_autocomplete>",
-    "system": "<your_system_instructions>"
-  }
-  ```
-
-## Customization
-
-- **Highlighting:** Update `Prism.js` language definitions to add more languages.
-- **Styling:** Modify the `prism-vs-dark.css` or provide a custom CSS theme.
-- **Server:** Replace the autocomplete API endpoint with your custom implementation.
-
-## Dependencies
-
-- React
-- `react-simple-code-editor`
-- `prismjs`
-- `prismjs/themes/prism-vs-dark.css`
