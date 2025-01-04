@@ -1,5 +1,5 @@
 
-![6051164](https://github.com/user-attachments/assets/1cfa2b1c-c744-4cbc-a7e7-b9d56c0c4ee6)
+# WIP
 
 ### TODO
 
@@ -8,11 +8,19 @@
 - Code selection for autocomplete
 - RAG for code in directory
 
-# Code Editor with Autocomplete
+# AI Code Editor Features
 
-https://github.com/user-attachments/assets/9927bb30-0674-4cb6-bd2c-f5bafdc5469c
+https://github.com/user-attachments/assets/93394956-c4b9-4a14-b2a2-a1effe9b9304
 
-This project implements a simple code editor with syntax highlighting and autocomplete functionality.
+https://github.com/user-attachments/assets/1bf70d96-2937-43a2-8474-de64b7457c89
+
+https://github.com/user-attachments/assets/a8734468-401a-45fe-8c1d-add675e4ee5c
+
+https://github.com/user-attachments/assets/10f5ecc4-9566-4cfd-9fcc-6a6ddae64bb4
+
+https://github.com/user-attachments/assets/c5f71674-d7eb-4816-99c6-55b9b4a732ca
+
+https://github.com/user-attachments/assets/31a0780e-0e09-4014-ab1d-ecc5a7b3e620
 
 ## Features
 
