@@ -11,11 +11,11 @@ export function Sidebar() {
 
   const { files, loading, error, getFileContent } = useGitHubFiles(
     activeOrg,
-    activeRepo,
+    activeRepo
   );
   const { openTab } = useEditor();
   const [expandedDirs, setExpandedDirs] = useState<{ [key: string]: boolean }>(
-    {},
+    {}
   );
 
   const handlePull = () => {
@@ -74,17 +74,17 @@ export function Sidebar() {
         ".pdf",
       ];
       const fileNameClass = textBasedExtensions.some((ext) =>
-        file.name.toLowerCase().endsWith(ext),
+        file.name.toLowerCase().endsWith(ext)
       )
         ? ""
-        : "text-orange-600";
+        : "text-orange-300";
 
       if (file.type === "dir") {
         const isExpanded = expandedDirs[filePath];
         return (
           <div key={filePath} className="ml-6 mb-2">
             <div
-              className="flex items-center cursor-pointer text-blue-600"
+              className="flex items-center cursor-pointer text-purple-400"
               onClick={() => handleFileClick(file)}
             >
               <Folder className="mr-2" />
@@ -111,42 +111,42 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-64 bg-gray-100 flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <h2 className="text-sm font-medium text-gray-800">Repository Files</h2>
+    <div className="w-64 bg-gray-800 flex flex-col h-full">
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <h2 className="text-sm font-medium text-gray-200">Repository Files</h2>
       </div>
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <input
           type="text"
           value={orgName}
           onChange={(e) => setOrgName(e.target.value)}
           placeholder="Organization Name"
-          className="bg-white text-gray-800 p-2 rounded w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-gray-700 text-gray-200 p-2 rounded w-full"
         />
       </div>
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <input
           type="text"
           value={repoName}
           onChange={(e) => setRepoName(e.target.value)}
           placeholder="Repository Name"
-          className="bg-white text-gray-800 p-2 rounded w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-gray-700 text-gray-200 p-2 rounded w-full"
         />
       </div>
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <button
           onClick={handlePull}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full transition duration-200 ease-in-out"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full"
         >
           Pull
         </button>
       </div>
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <a
           href={`https://github.com/${activeOrg}/${activeRepo}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium text-gray-600 hover:text-gray-800 flex items-center transition duration-200 ease-in-out"
+          className="text-sm font-medium text-gray-200 hover:text-gray-400 flex items-center"
         >
           <Github className="w-4 h-4 mr-2" />
           {activeOrg}/{activeRepo}
@@ -162,7 +162,7 @@ export function Sidebar() {
         ) : files ? (
           renderFiles(files)
         ) : null}
-      </div>
+      </div>{" "}
     </div>
   );
 }

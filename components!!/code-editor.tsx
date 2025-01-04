@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useRef, useCallback, useState, useEffect } from "react";
-import { DiffEditor, Editor } from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
+import React, { useRef, useCallback, useState, useEffect, use } from "react";
+import Editor from "react-simple-code-editor";
+import { DiffEditor } from "@monaco-editor/react";
 import Prism from "prismjs";
 import "prismjs/components/prism-python";
 import "prismjs/components/prism-markup";
-import "prismjs/themes/prism.css";
+import "prismjs/themes/prism-tomorrow.css";
 import OpenAI from "openai";
 import { Send } from "lucide-react";
 
@@ -16,7 +16,7 @@ import { useEditor, EditorContextType } from "../context/editor-context";
 import { EditorProvider } from "../context/editor-context";
 import { RightSidebar } from "./right-sidebar";
 import { EngineerAssistant } from "../helpers/prompts";
-import { editor } from "monaco-editor";
+import { set } from "zod";
 
 interface CodeEditorContentProps {
   setAllContentWithTabNames: React.Dispatch<
@@ -25,8 +25,8 @@ interface CodeEditorContentProps {
 }
 
 const OpenAIClient = new OpenAI({
-  baseURL: process.env.NEXT_PUBLIC_LLM_FIM_URL + "/beta" || "",
-  apiKey: process.env.NEXT_PUBLIC_LLM_API_TOKEN || "",
+  baseURL: process.env.NEXT_PUBLIC_LLM_FIM_URL + "/beta",
+  apiKey: process.env.NEXT_PUBLIC_LLM_API_TOKEN,
   dangerouslyAllowBrowser: true,
 });
 
@@ -47,57 +47,28 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
   const [showDiff, setShowDiff] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState("");
   const [pagePrompt, setPagePrompt] = useState("");
-  const [tabContents, setTabContents] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (activeContent) {
-      setTabContents((prev) => ({
-        ...prev,
-        [activeContent.id]: activeContent.content,
-      }));
-    }
-  }, [activeContent]);
-
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-
-  const updateCursorAndSelection = useCallback(() => {
-    if (!editorRef.current) return;
-    const editor = editorRef.current;
-    const model = editor.getModel();
-    const selection = editor.getSelection();
-
-    if (model && selection) {
-      const startPosition = model.getOffsetAt(selection.getStartPosition());
-      const endPosition = model.getOffsetAt(selection.getEndPosition());
-      const selectedText = model.getValueInRange(selection);
-
-      setCursorPosition(startPosition);
-      setSelectionStart(startPosition);
-      setSelectionEnd(endPosition);
-      setHighlightedCode(selectedText);
-    }
-  }, []);
-
-  const handleInputChange = (value: string | undefined) => {
-    if (value === undefined) return;
-    setCode(value);
-    if (editorRef.current) {
-      updateCursorAndSelection();
-    }
+  const updateCursorAndSelection = (target: HTMLTextAreaElement) => {
+    setCursorPosition(target.selectionStart);
+    setSelectionStart(target.selectionStart);
+    setSelectionEnd(target.selectionEnd);
+    setHighlightedCode(
+      target.value.slice(target.selectionStart, target.selectionEnd)
+    );
   };
 
-  const handleCursorMove = () => {
-    if (editorRef.current) {
-      updateCursorAndSelection();
-    }
+  const handleInputChange = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const target = e.target as HTMLTextAreaElement;
+    updateCursorAndSelection(target);
   };
 
-  const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor) => {
-    editorRef.current = editor;
-
-    editor.onDidChangeCursorSelection(() => {
-      handleCursorMove();
-    });
+  const handleCursorMove = (
+    e:
+      | React.MouseEvent<HTMLTextAreaElement>
+      | React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    const target = e.target as HTMLTextAreaElement;
+    updateCursorAndSelection(target);
   };
 
   useEffect(() => {
@@ -122,39 +93,25 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
 
   useEffect(() => {
     if (activeContent) {
-      // If we have stored content for this tab, use it
-      if (tabContents[activeContent.id]) {
-        setCode(tabContents[activeContent.id]);
-      } else {
-        setCode(activeContent.content);
-      }
       setPrefix("");
       setSuffix("");
       setAutocomplete("");
+      setCode(activeContent.content);
     } else {
       setPrefix("");
       setSuffix("");
       setAutocomplete("");
       setCode("");
     }
-  }, [activeContent, tabContents]);
+  }, [activeContent]);
 
-  const handleCodeChange = (newCode: string | undefined) => {
-    if (newCode === undefined) return;
-
+  const handleCodeChange = (newCode: string) => {
     setCode(newCode);
-    if (activeContent) {
-      // Update the tabContents state
-      setTabContents((prev) => ({
-        ...prev,
-        [activeContent.id]: newCode,
-      }));
-
-      // Update the tabs state
+    if (activeContent && newCode !== activeContent.content) {
       const updatedTabs = tabs.map((tab) =>
         tab.id === activeTab
           ? { ...tab, isUnsaved: true, content: newCode }
-          : tab,
+          : tab
       );
       setTabs(updatedTabs);
     }
@@ -177,8 +134,6 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
       "\nUse the highlighted code and the comment to update the code.\n" +
       "\nTake your time and focus on the user comment for the code update.\n" +
       "\nBased on the changes needed for the user, update other code in the document to make the user comment work.\n" +
-      "\nFull Code:\n" +
-      textToProcess +
       "\nHighlighted Code:\n" +
       highlightedCode +
       "\nUser Comment:\n" +
@@ -216,22 +171,12 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
   }, [code, activeContent, pagePrompt, highlightedCode]);
 
   const getAutocomplete = useCallback(async () => {
-    const editor = editorRef.current;
-    if (!editor) return;
+    const textToProcess = code;
 
-    const currentCode = editor.getValue();
-    const position = editor.getPosition();
-    if (!position) return;
-
-    const model = editor.getModel();
-    if (!model) return;
-    const currentCursorPosition = model.getOffsetAt(position);
-
-    const currentPrefix = currentCode.slice(0, currentCursorPosition);
-    const currentSuffix = currentCode.slice(currentCursorPosition);
-
-    setPrefix(currentPrefix);
-    setSuffix(currentSuffix);
+    setPrefix(textToProcess.slice(0, cursorPosition));
+    const prefix = textToProcess.slice(0, cursorPosition);
+    setSuffix(textToProcess.slice(cursorPosition));
+    const suffix = textToProcess.slice(cursorPosition);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -242,25 +187,19 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
     try {
       const response = await OpenAIClient.completions.create({
         model: "deepseek-chat",
-        prompt: EngineerAssistant + "\n" + currentPrefix,
-        suffix: currentSuffix || " ",
+        prompt: EngineerAssistant + "\n" + prefix,
+        suffix: suffix || " ",
         max_tokens: 1024,
         temperature: 0,
         stream: true,
       });
 
       let accumulatedResponse = "";
-      setShowDiff(true);
 
       for await (const chunk of response) {
         accumulatedResponse += chunk.choices[0]?.text;
-        const newCode = currentPrefix + accumulatedResponse + currentSuffix;
-        setAutocomplete(newCode);
-
-        // // Update the editor content
-        // if (editor) {
-        //   editor.setValue(newCode);
-        // }
+        setAutocomplete(accumulatedResponse);
+        setCode(prefix + accumulatedResponse + suffix);
       }
     } catch (error) {
       if ((error as Error).name === "AbortError") {
@@ -269,7 +208,7 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
         console.error("Error fetching autocomplete:", error);
       }
     }
-  }, []);
+  }, [code, cursorPosition]);
 
   const highlightWithLineNumbers = (input: string) =>
     Prism.highlight(input, Prism.languages.python, "python")
@@ -278,43 +217,36 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
       .join("\n");
 
   const handleKeyDown = useCallback(
-    (event: monaco.IKeyboardEvent) => {
-      const editor = editorRef.current;
-
-      if (editor) {
-        if (editor.getValue() === "Tab" && autocomplete) {
-          event.preventDefault();
-          const newCode = prefix + autocomplete + suffix;
-          setCode(newCode);
-          if (activeContent) {
-            const updatedTabs = tabs.map((tab) =>
-              tab.id === activeTab
-                ? { ...tab, isUnsaved: true, content: newCode }
-                : tab,
-            );
-            setTabs(updatedTabs);
-          }
-          setAutocomplete("");
-          setPrefix("");
-          setSuffix("");
-        } else if (event.altKey) {
-          event.preventDefault();
-          getAutocomplete();
-        } else if (event.metaKey || event.ctrlKey) {
-          if (
-            event.keyCode === monaco.KeyCode.KEY_Z ||
-            event.keyCode === monaco.KeyCode.KEY_Y
-          ) {
-            setAutocomplete("");
-            setPrefix("");
-            setSuffix("");
-          }
-        } else if (event.keyCode === monaco.KeyCode.Escape) {
-          setAutocomplete("");
-          setPrefix("");
-          setSuffix("");
-          setCode(prefix + suffix);
+    (e: React.KeyboardEvent<HTMLDivElement | HTMLTextAreaElement>) => {
+      if (e.key === "Tab" && autocomplete) {
+        e.preventDefault();
+        const newCode = prefix + autocomplete + suffix;
+        setCode(newCode);
+        if (activeContent) {
+          const updatedTabs = tabs.map((tab) =>
+            tab.id === activeTab
+              ? { ...tab, isUnsaved: true, content: newCode }
+              : tab
+          );
+          setTabs(updatedTabs);
         }
+        setAutocomplete("");
+        setPrefix("");
+        setSuffix("");
+      } else if (e.key === "Alt") {
+        e.preventDefault();
+        getAutocomplete();
+      } else if (e.metaKey || e.ctrlKey) {
+        if (e.key === "z" || e.key === "Z" || e.key === "y" || e.key === "Y") {
+          setAutocomplete("");
+          setPrefix("");
+          setSuffix("");
+        }
+      } else if (e.key === "Escape") {
+        setAutocomplete("");
+        setPrefix("");
+        setSuffix("");
+        setCode(prefix + suffix);
       }
     },
     [
@@ -326,12 +258,12 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
       setTabs,
       prefix,
       suffix,
-    ],
+    ]
   );
 
   if (!activeTab) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-600">
+      <div className="flex-1 flex items-center justify-center text-gray-400">
         Open a file from the sidebar to start editing
       </div>
     );
@@ -344,84 +276,110 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
           <DiffEditor
             height="100%"
             original={code}
-            modified={aiSuggestions || autocomplete}
+            modified={aiSuggestions}
             language="python"
-            theme="light"
+            theme="vs-dark"
             options={{
               readOnly: true,
-              renderSideBySide: false,
+              renderSideBySide: true,
               diffWordWrap: "on",
             }}
           />
         ) : (
           <>
             <Editor
-              height="100%"
-              defaultLanguage="python"
               value={code}
-              theme="light"
-              onChange={handleCodeChange}
-              options={{
-                wordWrap: "on",
-                minimap: { enabled: false },
-                lineNumbers: "on",
+              onValueChange={handleCodeChange}
+              highlight={highlightWithLineNumbers}
+              onKeyDown={handleKeyDown}
+              onKeyUp={handleCursorMove}
+              onSelect={handleCursorMove}
+              onChange={handleInputChange}
+              padding={0}
+              style={{
+                fontFamily: '"Fira code", "Fira Mono", monospace',
+                fontSize: 14,
+                lineHeight: "1.5",
+                overflow: "auto",
+                margin: 0,
+                position: "relative",
               }}
-              onMount={(editor) => {
-                editorRef.current = editor;
-                editor.onKeyDown((e) => handleKeyDown(e));
-                editor.onDidChangeCursorSelection(() => {
-                  handleCursorMove();
-                });
-              }}
+              textareaClassName="focus:outline-none"
+              className="min-h-full bg-gray-900 text-gray-300 [&_.editorLineNumber]:inline-block [&_.editorLineNumber]:w-[2em] [&_.editorLineNumber]:mr-4 [&_.editorLineNumber]:text-gray-500"
             />
+            {autocomplete && (
+              <div
+                className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none"
+                style={{
+                  fontFamily: '"Fira code", "Fira Mono", monospace',
+                  fontSize: 14,
+                  lineHeight: "1.5",
+                  padding: "1rem",
+                  whiteSpace: "pre-wrap",
+                  color: "rgba(156, 163, 175, 0.5)",
+                }}
+              >
+                <span>{prefix}</span>
+                <span className="bg-gray-900">{autocomplete}</span>
+                <span>{suffix}</span>
+              </div>
+            )}
+            {highlightedCode && (
+              <div
+                className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none"
+                style={{
+                  fontFamily: '"Fira code", "Fira Mono", monospace',
+                  fontSize: 14,
+                  lineHeight: "1.5",
+                  padding: "1rem",
+                  whiteSpace: "pre-wrap",
+                  color: "transparent", // Make the base text transparent
+                }}
+              >
+                <span style={{ color: "transparent" }}>
+                  {code.slice(0, selectionStart)}
+                </span>
+                <span
+                  className="bg-purple-700"
+                  style={{ color: "rgb(209 213 219)" }}
+                >
+                  {highlightedCode}
+                </span>
+                <span style={{ color: "transparent" }}>
+                  {code.slice(selectionEnd)}
+                </span>
+              </div>
+            )}
           </>
         )}
       </div>
       {showDiff && (
         <div className="mt-4 flex justify-end space-x-2">
           <button
-            onClick={() => {
-              setShowDiff(false);
-              setAiSuggestions("");
-              setAutocomplete("");
-              setCode(code);
-            }}
-            className="px-4 py-2 rounded-md text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors duration-200"
+            onClick={() => setShowDiff(false)}
+            className="px-4 py-2 rounded-md text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors duration-200"
           >
             Keep Original
           </button>
           <button
             onClick={() => {
-              const newCode = aiSuggestions || autocomplete;
-              setCode(newCode);
-              if (activeContent) {
-                setTabContents((prev) => ({
-                  ...prev,
-                  [activeContent.id]: newCode,
-                }));
-                const updatedTabs = tabs.map((tab) =>
-                  tab.id === activeTab
-                    ? { ...tab, isUnsaved: true, content: newCode }
-                    : tab,
-                );
-                setTabs(updatedTabs);
-              }
+              setCode(aiSuggestions);
               setHighlightedCode("");
               setShowDiff(false);
             }}
-            className="px-4 py-2 rounded-md text-sm bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-200"
+            className="px-4 py-2 rounded-md text-sm bg-green-600 hover:bg-green-500 text-white transition-colors duration-200"
           >
             Accept AI Suggestion
           </button>
         </div>
       )}
-      <div className="w-full h-16 flex items-center px-4 border-t border-gray-200">
+      <div className="w-full h-16 flex items-center px-4 border-t border-gray-700">
         <div className="flex w-full gap-2">
           <input
             type="text"
             value={pagePrompt}
             placeholder="Ask about the highlighted code..."
-            className="w-full h-10 px-4 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-800"
+            className="w-full h-10 px-4 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-gray-300"
             onChange={(e) => {
               setPagePrompt(e.target.value);
             }}
@@ -432,7 +390,7 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
             }}
           />
           <button
-            className="h-10 px-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:border-blue-500"
+            className="h-10 px-4 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 focus:outline-none focus:border-blue-500"
             onClick={() => codeUpdate()}
           >
             <Send size={20} className="mr-2" />
@@ -450,11 +408,11 @@ const CodeEditor: React.FC = () => {
 
   return (
     <EditorProvider>
-      <div className="flex h-screen bg-white text-gray-800">
+      <div className="flex h-screen bg-gray-900 text-gray-300">
         <div className="flex">
           <Sidebar />
           <div
-            className="w-1 cursor-col-resize hover:bg-gray-200 active:bg-gray-300"
+            className="w-1 cursor-col-resize hover:bg-gray-600 active:bg-gray-500"
             onMouseDown={(e) => {
               const startX = e.pageX;
               const sidebarElement = e.currentTarget
@@ -466,7 +424,7 @@ const CodeEditor: React.FC = () => {
                   const newWidth = initialWidth + (e.pageX - startX);
                   sidebarElement.style.width = `${Math.max(
                     200,
-                    Math.min(600, newWidth),
+                    Math.min(600, newWidth)
                   )}px`;
                 }
               };

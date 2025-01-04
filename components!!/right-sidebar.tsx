@@ -3,6 +3,8 @@
 import React, { useRef, useCallback, useState } from "react";
 import { ArrowLeft, ArrowRight, Send } from "lucide-react";
 import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { zodResponseFormat } from "openai/helpers/zod";
 import OpenAI from "openai";
 
 import {
@@ -19,7 +21,7 @@ const CodeFileChange = z.object({
     z.object({
       filepath: z.string(),
       code: z.string(),
-    }),
+    })
   ),
 });
 
@@ -29,13 +31,13 @@ const CodeSummary = z.object({
     z.object({
       filepath: z.string(),
       summary: z.string(),
-    }),
+    })
   ),
 });
 
 const OpenAIClient = new OpenAI({
-  baseURL: process.env.NEXT_PUBLIC_LLM_FIM_URL || "",
-  apiKey: process.env.NEXT_PUBLIC_LLM_API_TOKEN || "",
+  baseURL: process.env.NEXT_PUBLIC_LLM_FIM_URL,
+  apiKey: process.env.NEXT_PUBLIC_LLM_API_TOKEN,
   dangerouslyAllowBrowser: true,
 });
 
@@ -69,7 +71,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       fileContent = Object.entries(allContentWithTabNames)
         .map(
           ([tabName, content]) =>
-            `filepath: ${tabName}\n\ncontent: ${content}\n\n`,
+            `filepath: ${tabName}\n\ncontent: ${content}\n\n`
         )
         .join("");
     }
@@ -124,7 +126,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         const content = chunk.choices[0].delta.content || "";
         fullResponse += content;
         setResponse((prev) =>
-          prev === "loading..." ? content : prev + content,
+          prev === "loading..." ? content : prev + content
         );
       }
       addMessage("assistant", fullResponse);
@@ -142,24 +144,20 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
   return (
     <div
-      className={`fixed w-[50%] bg-white flex flex-col h-full transition-all duration-300 ${
+      className={`fixed w-[50%] bg-gray-800 flex flex-col h-full transition-all duration-300 ${
         isOpen ? "right-0" : "right-[-50%]"
-      } top-0 border-l border-gray-200 z-50 shadow-lg`}
+      } top-0 border-l border-gray-700 z-50`}
     >
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <h2 className="text-sm font-medium text-gray-800">Code Assistant</h2>
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <h2 className="text-sm font-medium text-gray-200">Code Assistant</h2>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="fixed right-0 top-4 bg-white p-2 rounded-l z-50 shadow-md"
+          className="fixed right-0 top-4 bg-gray-800 p-2 rounded-l z-50"
         >
-          {isOpen ? (
-            <ArrowRight size={20} className="text-gray-600" />
-          ) : (
-            <ArrowLeft size={20} className="text-gray-600" />
-          )}
+          {isOpen ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
         </button>
       </div>
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <input
           type="text"
           value={searchValue}
@@ -169,13 +167,13 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
               handleSearch();
             }
           }}
-          className="bg-gray-100 text-gray-800 p-2 rounded w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-gray-700 text-gray-200 p-2 rounded w-full"
         />
       </div>
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <button
           onClick={handleSearch}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full flex items-center justify-center transition duration-200 ease-in-out"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full flex items-center justify-center"
           disabled={isLoading}
         >
           <Send size={20} className="mr-2" />
@@ -183,7 +181,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         </button>
         <button
           onClick={clearHistory}
-          className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded w-[25%] flex items-center justify-center ml-2 transition duration-200 ease-in-out"
+          className="bg-purple-400 hover:bg-purple-200 text-white px-4 py-2 rounded w-[25%] flex items-center justify-center"
         >
           Clear History
         </button>
@@ -193,23 +191,22 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         {chatHistory.map((message, index) => (
           <div
             key={index}
-            className={`mb-4 ${message.role === "user" ? "text-right" : "text-left"}`}
+            className={`mb-4
+          ${message.role === "user" ? "text-right" : "text-left"}`}
           >
             <div
               className={`inline-block p-2 rounded-lg ${
-                message.role === "user"
-                  ? "bg-blue-500 text-white ml-auto"
-                  : "bg-gray-100 text-gray-800"
+                message.role === "user" ? "bg-blue-500 text-white ml-auto" : ""
               }`}
             >
               {message.role === "user" ? (
                 <pre className="whitespace-pre-wrap">{message.content}</pre>
               ) : (
-                <div className="w-full">
+                <div className="w-[full]">
                   <GitHubMarkdown
                     content={
                       isStream && index === chatHistory.length - 1
-                        ? (response ?? "")
+                        ? response ?? ""
                         : message.content
                     }
                   />
@@ -228,9 +225,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed right-0 top-4 bg-white p-2 rounded-l z-50 shadow-md"
+          className="fixed right-0 top-4 bg-gray-800 p-2 rounded-l z-50"
         >
-          <ArrowLeft size={20} className="text-gray-600" />
+          <ArrowLeft size={20} className="text-gray-200" />
         </button>
       )}
     </div>

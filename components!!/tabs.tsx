@@ -10,9 +10,9 @@ export function Tabs() {
 
   if (tabs.length === 0) {
     return (
-      <div className="flex bg-gray-100 px-4 h-[53px] border-b border-gray-200">
+      <div className="flex bg-gray-800 px-4 h-[53px] border-b border-gray-700">
         <div className="flex items-center">
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-400">
             Press ⇧⌘T to create a new tab
           </span>
         </div>
@@ -21,15 +21,15 @@ export function Tabs() {
   }
 
   return (
-    <div className="flex bg-gray-100 px-4 overflow-x-auto h-[53px] border-b border-gray-200">
+    <div className="flex bg-gray-800 px-4 overflow-x-auto h-[53px] border-gray-700">
       {tabs.map((tab) => (
         <div
           key={tab.id}
           className={cn(
-            "flex items-center space-x-2 py-2 px-4 border-t-2 border-transparent cursor-pointer group",
+            "flex items-center space-x-2 py-2 px-4 border-t border-transparent cursor-pointer group",
             activeTab === tab.id
-              ? "bg-white text-blue-600 border-t-blue-500"
-              : "text-gray-600 hover:bg-gray-200",
+              ? "bg-gray-900 text-purple-300 border-t-purple-500"
+              : "text-gray-400 hover:bg-gray-700"
           )}
           onClick={() => setActiveTab(tab.id)}
         >
@@ -43,7 +43,7 @@ export function Tabs() {
               e.stopPropagation();
               closeTab(tab.id);
             }}
-            className="ml-2 p-0.5 rounded-sm opacity-0 group-hover:opacity-100 hover:bg-gray-300"
+            className="ml-2 p-0.5 rounded-sm opacity-0 group-hover:opacity-100 hover:bg-gray-700"
           >
             <X className="w-3 h-3" />
             <span className="sr-only">Close tab</span>
