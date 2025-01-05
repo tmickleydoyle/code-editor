@@ -68,23 +68,25 @@ export const CodeSummaryOutput = `
 export function generateArtifactPrompt(userInput: string): string {
   return `
 **Objective:**
-You are an expert full-stack developer specializing in TypeScript, Next.js, and Tailwind CSS. Your task is to generate a complete, functional app based on a user's input. The app should have a clean, simple design and address the user's prompt directly. The output should include two bash scripts: one for setting up the project and another for creating TypeScript files and running the app.
+You are an expert full-stack developer specializing in TypeScript, Next.js, and Tailwind CSS. Your task is to generate a fully functional and user-friendly app based on the user's input. Ensure the design is polished and adheres to professional standards.
 
 **Requirements:**
-1. Use **TypeScript** for type safety.
-2. Use **Next.js** for the framework with the app router, not pages. Use functions like useEffect and useState for state management and side effects.
-3. Use **Tailwind CSS** for styling.
-4. Use **Shadcn** for components. You can use any other library if needed. Ensure shadcn is install properly.
-5. Keep the design simple and user-friendly.
-6. Include two bash scripts in the output:
-   - One for setting up the app.
-   - One for creating the TypeScript file (if needed) and running the app.
-7. Ensure the app is fully functional and addresses the user's prompt directly.
+1. Use **TypeScript** for type safety and maintainability.
+2. Use **Next.js** with the app router for routing (avoid the pages directory). Use functions like useEffect and useState for state management and side effects.
+3. Use **Tailwind CSS** for styling, following a clean and consistent design language.
+4. Use **Shadcn** for UI components. Ensure proper installation and configuration of Shadcn.
+5. Ensure the app has a clean, intuitive, and accessible design.
+6. Include the following bash scripts in the output:
+   - **Setup script:** Installs dependencies, initializes the project, and configures the required tools.
+   - **File creation script:** Dynamically creates required TypeScript files and starts the application.
+7. Ensure all NPM packages required by the app are included in the bash scripts.
+8. Address the user's prompt directly, adhering to their requirements.
 
 **Thoughtfulness and Quality:**
-- Take your time to fully understand the user’s input. If anything is unclear, make reasonable assumptions to align with the user's likely needs.
-- For complex requests, break the app into modular components, each with a single responsibility, following best practices for maintainability and scalability.
-- Write clean, well-documented, and reusable code adhering to the highest standards of software development.
+- Fully analyze the user's input to ensure the app meets their expectations.
+- For complex requests, break the app into modular, reusable components, each adhering to the single-responsibility principle.
+- Follow best practices for code clarity, scalability, and maintainability.
+- Add meaningful comments to the code for better understanding and documentation.
 
 **Example Input:**
 "Create a to-do list app where users can add, delete, and mark tasks as completed."
@@ -92,45 +94,45 @@ You are an expert full-stack developer specializing in TypeScript, Next.js, and 
 **Example Output:**
 \`\`\`bash
 # Script 1: Set up the Next.js app with TypeScript and Tailwind CSS
-npx create-next-app@latest my-app --typescript --tailwind --yes
-cd my-app
+npx create-next-app@latest my-app --typescript --tailwind --yes \\
+&& cd my-app
 
 # Script 2: Create the TypeScript files and run the app
 cat << 'EOF' > app/page.tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { PlusCircle, Trash2 } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState } from 'react';
+import { PlusCircle, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface Todo {
-  id: number
-  text: string
-  completed: boolean
+  id: number;
+  text: string;
+  completed: boolean;
 }
 
 export default function TodoList() {
-  const [todos, setTodos] = useState<Todo[]>([])
-  const [newTodo, setNewTodo] = useState('')
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [newTodo, setNewTodo] = useState('');
 
   const addTodo = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newTodo.trim() !== '') {
-      setTodos([...todos, { id: Date.now(), text: newTodo, completed: false }])
-      setNewTodo('')
+    e.preventDefault();
+    if (newTodo.trim()) {
+      setTodos([...todos, { id: Date.now(), text: newTodo, completed: false }]);
+      setNewTodo('');
     }
-  }
+  };
 
   const toggleTodo = (id: number) => {
     setTodos(todos.map(todo =>
       todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ))
-  }
+    ));
+  };
 
   const deleteTodo = (id: number) => {
-    setTodos(todos.filter(todo => todo.id !== id))
-  }
+    setTodos(todos.filter(todo => todo.id !== id));
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 py-8">
@@ -173,23 +175,22 @@ export default function TodoList() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
 
 EOF
 
-npm install next react react-dom tailwindcss lucide-react @radix-ui/react-slot class-variance-authority clsx tailwind-merge
-npm install --save-dev typescript @types/react @types/react-dom @types/node
-npx shadcn@latest init --yes
-npx shadcn@latest add button input --yes
-npm run dev
+npm install next react react-dom tailwindcss lucide-react @radix-ui/react-slot class-variance-authority clsx tailwind-merge \\
+&& npm install --save-dev typescript @types/react@18 @types/react-dom@18 @types/node \\
+&& npx shadcn@latest init -d \\
+&& npx shadcn@latest add button input \\
+&& npm run dev
 \`\`\`
 
 **User Input:**
 "${userInput}"
 
 **Your Task:**
-Generate a complete app based on the user's input. Include two bash scripts and all necessary code. Ensure the app is functional, simple, and addresses the user's prompt directly. If the request is complex, use modular components and follow best practices to ensure the code is of the highest quality. If NPM packages are required, include them in the setup script.
+Generate a complete app based on the user's input. Include bash scripts for setup and file creation. Adhere to clean coding practices and ensure the app meets professional design standards.
   `;
 }
