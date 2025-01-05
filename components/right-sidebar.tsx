@@ -9,6 +9,7 @@ import {
   EngineerAssistant,
   CodeChangeOutput,
   CodeSummaryOutput,
+  generateArtifactPrompt,
 } from "../helpers/prompts";
 import { useChatHistory } from "../helpers/chat-history-manager";
 import { GitHubMarkdown } from "../components/github-markdown";
@@ -76,7 +77,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
     try {
       let promptContent = searchValue;
-      let responseFormat: z.ZodTypeAny = CodeFileChange;
+      // let responseFormat: z.ZodTypeAny = CodeFileChange;
 
       if (searchValue.startsWith("/update")) {
         promptContent =
@@ -104,7 +105,15 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           searchValue.replace("/summary", "");
       }
 
+      if (searchValue.startsWith("/new-artifact")) {
+        promptContent = generateArtifactPrompt(
+          searchValue.replace("/artifact", ""),
+        );
+      }
+
       addMessage("user", searchValue);
+
+      console.log(promptContent);
 
       const messageResponse = await OpenAIClient.chat.completions.create({
         model: "deepseek-chat",
