@@ -4,6 +4,7 @@ import React, { useRef, useCallback, useState } from "react";
 import { ArrowLeft, ArrowRight, Send } from "lucide-react";
 import { z } from "zod";
 import OpenAI from "openai";
+import { memo } from "react";
 
 import {
   EngineerAssistant,
@@ -39,6 +40,41 @@ const OpenAIClient = new OpenAI({
   apiKey: process.env.NEXT_PUBLIC_LLM_API_TOKEN || "",
   dangerouslyAllowBrowser: true,
 });
+
+const MemoizedChatHistory = memo(({ chatHistory, response, isStream }) => (
+  <>
+    {chatHistory.map((message, index) => (
+      <div
+        key={index}
+        className={`mb-4 ${message.role === "user" ? "text-right" : "text-left"}`}
+      >
+        <div
+          className={`inline-block p-2 rounded-lg ${
+            message.role === "user"
+              ? "bg-blue-500 text-white ml-auto"
+              : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {message.role === "user" ? (
+            <pre className="whitespace-pre-wrap">{message.content}</pre>
+          ) : (
+            <div className="w-full">
+              <GitHubMarkdown
+                content={
+                  isStream && index === chatHistory.length - 1
+                    ? (response ?? "")
+                    : message.content
+                }
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    ))}
+  </>
+));
+
+MemoizedChatHistory.displayName = "MemoizedChatHistory";
 
 interface RightSidebarProps {
   allContentWithTabNames: Record<string, string>;
@@ -113,8 +149,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
       addMessage("user", searchValue);
 
-      console.log(promptContent);
-
       const messageResponse = await OpenAIClient.chat.completions.create({
         model: "deepseek-chat",
         messages: [
@@ -146,7 +180,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         setResponse("Failed to fetch repository contents");
       }
     }
-  }, [searchValue, chatHistory, addMessage]);
+  }, [searchValue, chatHistory, addMessage, allContentWithTabNames]);
 
   return (
     <div
@@ -198,34 +232,11 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        {chatHistory.map((message, index) => (
-          <div
-            key={index}
-            className={`mb-4 ${message.role === "user" ? "text-right" : "text-left"}`}
-          >
-            <div
-              className={`inline-block p-2 rounded-lg ${
-                message.role === "user"
-                  ? "bg-blue-500 text-white ml-auto"
-                  : "bg-gray-100 text-gray-800"
-              }`}
-            >
-              {message.role === "user" ? (
-                <pre className="whitespace-pre-wrap">{message.content}</pre>
-              ) : (
-                <div className="w-full">
-                  <GitHubMarkdown
-                    content={
-                      isStream && index === chatHistory.length - 1
-                        ? (response ?? "")
-                        : message.content
-                    }
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+        <MemoizedChatHistory
+          chatHistory={chatHistory}
+          response={response}
+          isStream={isStream}
+        />
         {isLoading && (
           <div className="flex justify-center items-center h-full">
             <div className="animate-spin w-6 h-6 text-blue-500"></div>
