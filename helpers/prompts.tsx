@@ -194,5 +194,181 @@ npm install next react@18.2.0 react-dom@18.2.0 tailwindcss lucide-react @radix-u
 
 **Your Task:**
 Generate a complete app based on the user's input. Include bash scripts for setup and file creation. Adhere to clean coding practices and ensure the app meets professional design standards.
+
+ONLY INNCLUDE CHARTS IF THE USER REQUESTS CHARTS OR DASHBOARDS.
+  `;
+}
+
+export function generateAnalyticsPrompt(userInput: string): string {
+  return `
+**Objective:**
+You are an expert Analytics Engineer specializing in SQL, dbt, and data modeling best practices. Your task is to design a dbt-compatible data model based on the user's input. The model must adhere to professional standards and follow analytics engineering best practices.
+
+**Requirements:**
+1. Use **SQL** with dbt formatting for all transformations, ensuring code is modular and maintainable.
+2. Organize models into the following dbt layers:
+   - **Staging Layer (\`stg_\`)**: Clean and prepare raw data for transformation.
+   - **Intermediate Layer (\`int_\`)**: Apply business logic, joins, and enrichments.
+   - **Final Layer (\`fct_\`)**: Create polished, analysis-ready tables (facts and dimensions).
+3. Follow **column naming conventions** using \`snake_case\` for clarity and consistency.
+4. Add **dbt Jinja macros** or configurations where applicable (e.g., incremental models, table materializations).
+5. Provide a clear **dbt project structure** for organizing models, macros, and YAML documentation.
+6. Include meaningful **comments** to document logic and assumptions in SQL files.
+
+---
+
+### Example Input:
+**User Input:** "${userInput}"
+
+---
+
+**Response Framework:**
+
+1. **Understanding the Requirements:**
+   - **Objective:** [Summarize the goal based on user input, e.g., "Model sales data to calculate monthly revenue by customer segment."]
+   - **Available Data:** [Summarize input tables and their schemas.]
+   - **Assumptions:** [List assumptions made based on incomplete input.]
+
+2. **Proposed dbt Data Model Design:**
+
+---
+
+#### **Staging Layer (e.g., \`stg_sales.sql\`)**
+Prepares raw sales data for transformations.
+
+\`\`\`sql
+{{ config(
+    materialized='view'
+) }}
+
+with raw_sales as (
+    select
+        cast(order_id as bigint) as order_id,
+        customer_id,
+        product_id,
+        date_trunc('day', order_date) as order_date,
+        quantity,
+        price_per_unit
+    from {{ source('raw', 'sales') }}
+),
+
+deduplicated_sales as (
+    select distinct *
+    from raw_sales
+)
+
+select *
+from deduplicated_sales;
+\`\`\`
+
+---
+
+#### **Intermediate Layer (e.g., \`int_sales_enriched.sql\`)**
+Enriches sales data by joining with customer and product tables.
+
+\`\`\`sql
+{{ config(
+    materialized='view'
+) }}
+
+with sales_data as (
+    select *
+    from {{ ref('stg_sales') }}
+),
+
+customer_data as (
+    select
+        customer_id,
+        segment as customer_segment
+    from {{ ref('stg_customers') }}
+),
+
+product_data as (
+    select
+        product_id,
+        category as product_category
+    from {{ ref('stg_products') }}
+)
+
+select
+    s.order_id,
+    s.customer_id,
+    c.customer_segment,
+    p.product_category,
+    s.quantity * s.price_per_unit as revenue,
+    date_trunc('month', s.order_date) as order_month
+from sales_data s
+left join customer_data c
+    on s.customer_id = c.customer_id
+left join product_data p
+    on s.product_id = p.product_id;
+\`\`\`
+
+---
+
+#### **Final Layer (e.g., \`fct_monthly_revenue.sql\`)**
+Aggregates enriched data to calculate monthly revenue by customer segment.
+
+\`\`\`sql
+{{ config(
+    materialized='table'
+) }}
+
+with enriched_sales as (
+    select *
+    from {{ ref('int_sales_enriched') }}
+)
+
+select
+    order_month,
+    customer_segment,
+    sum(revenue) as total_revenue
+from enriched_sales
+group by
+    order_month,
+    customer_segment
+order by
+    order_month,
+    customer_segment;
+\`\`\`
+
+---
+
+3. **dbt Project Structure:**
+   - **Staging Models:** Place in \`models/staging\` and prefix filenames with \`stg_\`.
+   - **Intermediate Models:** Place in \`models/intermediate\` and prefix filenames with \`int_\`.
+   - **Final Models:** Place in \`models/final\` and prefix filenames with \`fct_\`.
+
+Example file paths:
+   - \`models/staging/stg_sales.sql\`
+   - \`models/intermediate/int_sales_enriched.sql\`
+   - \`models/final/fct_monthly_revenue.sql\`
+
+---
+
+4. **Documentation Example (YAML):**
+Document each model in a dbt YAML file for better maintainability.
+
+\`\`\`yaml
+version: 2
+
+models:
+  - name: fct_monthly_revenue
+    description: "Aggregated table providing monthly revenue by customer segment."
+    columns:
+      - name: order_month
+        description: "The month of the order."
+      - name: customer_segment
+        description: "Segment of the customer (e.g., premium, regular)."
+      - name: total_revenue
+        description: "Total revenue for the given month and customer segment."
+\`\`\`
+
+5. **Assumptions and Next Steps:**
+   - Clearly outline any assumptions made in the data model design (e.g., all dates are in UTC).
+   - Suggest follow-up steps or additional data points needed to refine the model further.
+
+6. **YAML Files:**
+   - Include YAML files for each model to document their purpose and columns.
   `;
 }

@@ -244,7 +244,7 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
         model: "deepseek-chat",
         prompt: EngineerAssistant + "\n" + currentPrefix,
         suffix: currentSuffix || " ",
-        max_tokens: 1024,
+        max_tokens: 8000,
         temperature: 0,
         stream: true,
       });
@@ -349,8 +349,9 @@ const CodeEditorContent: React.FC<CodeEditorContentProps> = ({
             theme="light"
             options={{
               readOnly: true,
-              renderSideBySide: false,
-              diffWordWrap: "on",
+              renderSideBySide: true,
+              diffWordWrap: "off",
+              lineNumbers: "on",
             }}
           />
         ) : (

@@ -11,6 +11,7 @@ import {
   CodeChangeOutput,
   CodeSummaryOutput,
   generateArtifactPrompt,
+  generateAnalyticsPrompt,
 } from "../helpers/prompts";
 import { useChatHistory } from "../helpers/chat-history-manager";
 import { GitHubMarkdown } from "../components/github-markdown";
@@ -147,10 +148,17 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         );
       }
 
+      if (searchValue.startsWith("/new-analytics")) {
+        promptContent = generateAnalyticsPrompt(
+          searchValue.replace("/new-analytics", ""),
+        );
+      }
+
       addMessage("user", searchValue);
 
       const messageResponse = await OpenAIClient.chat.completions.create({
         model: "deepseek-chat",
+        max_tokens: 8000,
         messages: [
           { role: "system", content: EngineerAssistant },
           ...chatHistory,
