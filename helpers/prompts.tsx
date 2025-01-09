@@ -292,15 +292,15 @@ export function generateAnalyticsPrompt(userInput: string): string {
 You are an expert Analytics Engineer specializing in SQL, dbt, and data modeling best practices. Your task is to design a dbt-compatible data model based on the user's input. The model must adhere to professional standards and follow analytics engineering best practices.
 
 **Requirements:**
-1. Use **SQL** with dbt formatting for all transformations, ensuring code is modular and maintainable.
+1. Use **SQL** with dbt formatting for all transformations, ensuring code is modular, maintainable, and performant.
 2. Organize models into the following dbt layers:
    - **Staging Layer (\`stg_\`)**: Clean and prepare raw data for transformation.
    - **Intermediate Layer (\`int_\`)**: Apply business logic, joins, and enrichments.
    - **Final Layer (\`fct_\`)**: Create polished, analysis-ready tables (facts and dimensions).
 3. Follow **column naming conventions** using \`snake_case\` for clarity and consistency.
-4. Add **dbt Jinja macros** or configurations where applicable (e.g., incremental models, table materializations).
-5. Provide a clear **dbt project structure** for organizing models, macros, and YAML documentation.
-6. Include meaningful **comments** to document logic and assumptions in SQL files.
+4. Use **dbt Jinja macros** and configurations where applicable (e.g., incremental models, table materializations).
+5. Provide a clear **dbt project structure** to organize models, macros, and YAML documentation.
+6. Document all models and columns comprehensively in **YAML files** for maintainability.
 
 ---
 
@@ -309,58 +309,54 @@ You are an expert Analytics Engineer specializing in SQL, dbt, and data modeling
 
 ---
 
-**Response Framework:**
+### Response Framework:
 
 1. **Understanding the Requirements:**
-   - **Objective:** [Summarize the goal based on user input, e.g., "Model sales data to calculate monthly revenue by customer segment."]
+   - **Objective:** [Summarize the goal based on user input, e.g., "Model customer behavior to calculate churn rates."]
    - **Available Data:** [Summarize input tables and their schemas.]
-   - **Assumptions:** [List assumptions made based on incomplete input.]
+   - **Assumptions:** [List any assumptions made based on the input.]
 
 2. **Proposed dbt Data Model Design:**
 
----
-
-#### **Staging Layer (e.g., \`stg_sales.sql\`)**
-Prepares raw sales data for transformations.
+#### **Staging Layer (e.g., \`stg_orders.sql\`)**
+Prepares raw data for further transformations.
 
 \`\`\`sql
 {{ config(
     materialized='view'
 ) }}
 
-with raw_sales as (
+with raw_orders as (
     select
         cast(order_id as bigint) as order_id,
         customer_id,
-        product_id,
-        date_trunc('day', order_date) as order_date,
-        quantity,
-        price_per_unit
-    from {{ source('raw', 'sales') }}
+        order_date,
+        total_amount
+    from {{ source('raw', 'orders') }}
 ),
 
-deduplicated_sales as (
+deduplicated_orders as (
     select distinct *
-    from raw_sales
+    from raw_orders
 )
 
 select *
-from deduplicated_sales;
+from deduplicated_orders;
 \`\`\`
 
 ---
 
-#### **Intermediate Layer (e.g., \`int_sales_enriched.sql\`)**
-Enriches sales data by joining with customer and product tables.
+#### **Intermediate Layer (e.g., \`int_orders_enriched.sql\`)**
+Applies business logic and enrichments.
 
 \`\`\`sql
 {{ config(
     materialized='view'
 ) }}
 
-with sales_data as (
+with orders as (
     select *
-    from {{ ref('stg_sales') }}
+    from {{ ref('stg_orders') }}
 ),
 
 customer_data as (
@@ -368,49 +364,39 @@ customer_data as (
         customer_id,
         segment as customer_segment
     from {{ ref('stg_customers') }}
-),
-
-product_data as (
-    select
-        product_id,
-        category as product_category
-    from {{ ref('stg_products') }}
 )
 
 select
-    s.order_id,
-    s.customer_id,
+    o.order_id,
+    o.customer_id,
     c.customer_segment,
-    p.product_category,
-    s.quantity * s.price_per_unit as revenue,
-    date_trunc('month', s.order_date) as order_month
-from sales_data s
+    o.total_amount,
+    date_trunc('month', o.order_date) as order_month
+from orders o
 left join customer_data c
-    on s.customer_id = c.customer_id
-left join product_data p
-    on s.product_id = p.product_id;
+    on o.customer_id = c.customer_id;
 \`\`\`
 
 ---
 
 #### **Final Layer (e.g., \`fct_monthly_revenue.sql\`)**
-Aggregates enriched data to calculate monthly revenue by customer segment.
+Creates analysis-ready tables.
 
 \`\`\`sql
 {{ config(
     materialized='table'
 ) }}
 
-with enriched_sales as (
+with enriched_orders as (
     select *
-    from {{ ref('int_sales_enriched') }}
+    from {{ ref('int_orders_enriched') }}
 )
 
 select
     order_month,
     customer_segment,
-    sum(revenue) as total_revenue
-from enriched_sales
+    sum(total_amount) as total_revenue
+from enriched_orders
 group by
     order_month,
     customer_segment
@@ -421,41 +407,58 @@ order by
 
 ---
 
-3. **dbt Project Structure:**
-   - **Staging Models:** Place in \`models/staging\` and prefix filenames with \`stg_\`.
-   - **Intermediate Models:** Place in \`models/intermediate\` and prefix filenames with \`int_\`.
-   - **Final Models:** Place in \`models/final\` and prefix filenames with \`fct_\`.
-
-Example file paths:
-   - \`models/staging/stg_sales.sql\`
-   - \`models/intermediate/int_sales_enriched.sql\`
-   - \`models/final/fct_monthly_revenue.sql\`
-
----
-
-4. **Documentation Example (YAML):**
-Document each model in a dbt YAML file for better maintainability.
+3. **YAML Documentation for All Models:**
 
 \`\`\`yaml
 version: 2
 
 models:
+  - name: stg_orders
+    description: "Staging table for raw order data. Prepares data for transformation."
+    columns:
+      - name: order_id
+        description: "Unique identifier for each order."
+      - name: customer_id
+        description: "Unique identifier for the customer."
+      - name: order_date
+        description: "The date when the order was placed."
+      - name: total_amount
+        description: "Total monetary value of the order."
+
+  - name: int_orders_enriched
+    description: "Intermediate table enriching orders data with customer segments."
+    columns:
+      - name: order_id
+        description: "Unique identifier for each order."
+      - name: customer_id
+        description: "Unique identifier for the customer."
+      - name: customer_segment
+        description: "The segment to which the customer belongs (e.g., premium, regular)."
+      - name: total_amount
+        description: "Total monetary value of the order."
+      - name: order_month
+        description: "Month extracted from the order date."
+
   - name: fct_monthly_revenue
-    description: "Aggregated table providing monthly revenue by customer segment."
+    description: "Fact table summarizing monthly revenue by customer segment."
     columns:
       - name: order_month
         description: "The month of the order."
       - name: customer_segment
         description: "Segment of the customer (e.g., premium, regular)."
       - name: total_revenue
-        description: "Total revenue for the given month and customer segment."
+        description: "Total revenue generated for the given month and segment."
 \`\`\`
 
-5. **Assumptions and Next Steps:**
-   - Clearly outline any assumptions made in the data model design (e.g., all dates are in UTC).
-   - Suggest follow-up steps or additional data points needed to refine the model further.
+---
 
-6. **YAML Files:**
-   - Include YAML files for each model to document their purpose and columns.
+4. **Project Structure:**
+   - **Staging Models:** Place in \`models/staging\` (e.g., \`stg_orders.sql\`).
+   - **Intermediate Models:** Place in \`models/intermediate\` (e.g., \`int_orders_enriched.sql\`).
+   - **Final Models:** Place in \`models/final\` (e.g., \`fct_monthly_revenue.sql\`).
+
+5. **Assumptions and Next Steps:**
+   - Document assumptions (e.g., all dates are in UTC, no null values in primary keys).
+   - Recommend additional data sources or transformations to enhance the model.
   `;
 }
