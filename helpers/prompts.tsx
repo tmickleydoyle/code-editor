@@ -195,7 +195,7 @@ npm install next react@18.2.0 react-dom@18.2.0 tailwindcss lucide-react @radix-u
 **Your Task:**
 Generate a complete app based on the user's input. Include bash scripts for setup and file creation. Adhere to clean coding practices and ensure the app meets professional design standards.
 
-ONLY INNCLUDE CHARTS IF THE USER REQUESTS CHARTS OR DASHBOARDS.
+ONLY INCLUDE CHARTS IF THE USER REQUESTS CHARTS OR DASHBOARDS.
   `;
 }
 
